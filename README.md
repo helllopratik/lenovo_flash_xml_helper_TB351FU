@@ -91,7 +91,7 @@ What this does:
 
 ```bash
 ./venv/bin/python ./run_lenovo_decrypt.py \
-  --package-dir ~/Desktop/rom/rom \
+  --package-dir ~/Desktop/TB351FU_ROW_OPEN_USER_M15125.2_A16_ZUI_17.5.10.073_ST_260213/TB351FU_ROW_OPEN_USER_M15125.2_A16_ZUI_17.5.10.073_ST_260213 \
   --output-dir ~/Desktop/rom-decrypt
 ```
 
@@ -99,7 +99,7 @@ If needed, you can pass the password explicitly:
 
 ```bash
 ./venv/bin/python ./run_lenovo_decrypt.py \
-  --package-dir ~/Desktop/TB351FU_ROW_OPEN_USER_M15125.2_A16_ZUI_17.5.10.073_ST_260213 \
+  --package-dir ~/Desktop/TB351FU_ROW_OPEN_USER_M15125.2_A16_ZUI_17.5.10.073_ST_260213/TB351FU_ROW_OPEN_USER_M15125.2_A16_ZUI_17.5.10.073_ST_260213 \
   --output-dir ~/Desktop/rom-decrypt \
   --password OSD
 ```
