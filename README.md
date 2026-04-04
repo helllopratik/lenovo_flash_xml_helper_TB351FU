@@ -69,10 +69,15 @@ Observed values from the decrypted metadata:
 
 ## Installation
 
+Before cloning the repo
+
+```bash
+sudo apt install python3.13-venv
+```
 From the repository root:
 
 ```bash
-bash ./install.sh
+bash ./install.sh &&  source venv/bin/activate
 ```
 
 What this does:
@@ -85,17 +90,17 @@ What this does:
 ## Quick Start
 
 ```bash
-./.venv/bin/python ./run_lenovo_decrypt.py \
-  --package-dir /path/to/TB351FU_ROM_FOLDER \
-  --output-dir /path/to/output_folder
+./venv/bin/python ./run_lenovo_decrypt.py \
+  --package-dir ~/Desktop/rom/rom \
+  --output-dir ~/Desktop/rom-decrypt
 ```
 
 If needed, you can pass the password explicitly:
 
 ```bash
-./.venv/bin/python ./run_lenovo_decrypt.py \
-  --package-dir /path/to/TB351FU_ROM_FOLDER \
-  --output-dir /path/to/output_folder \
+./venv/bin/python ./run_lenovo_decrypt.py \
+  --package-dir ~/Desktop/TB351FU_ROW_OPEN_USER_M15125.2_A16_ZUI_17.5.10.073_ST_260213 \
+  --output-dir ~/Desktop/rom-decrypt \
   --password OSD
 ```
 
