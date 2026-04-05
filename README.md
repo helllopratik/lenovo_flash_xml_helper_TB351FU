@@ -12,6 +12,9 @@
   <strong>TB351FU</strong> • <strong>Encrypted Lenovo firmware</strong> • <strong>SP Flash Tool bundle generation</strong> • <strong>Python helper</strong>
 </p>
 
+> [!NOTE]
+> TB351FU DevHub link for users who want to all the development related links in one place including custom roms and recovery [TB351FU_Dev_HUB](https://helllopratik.github.io/tb351fu/).
+
 > [!WARNING]
 > This helper validates package structure and prepares usable XML assets, but it does not guarantee a successful flash or a bootable device. Always confirm the firmware matches the exact model before flashing anything.
 
