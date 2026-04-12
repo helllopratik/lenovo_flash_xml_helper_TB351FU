@@ -227,6 +227,9 @@ This repository is especially useful when you want to generate the XML and suppo
 
 ## Acknowledgements
 
+ - Maintainer: `Pratik Gondane (@helllopratik)`
+ - Device: `Lenovo Tab Plus (2024) TB351FU`
+
 Special thanks to:
 
 - `mtkclient` for the broader MediaTek tooling and research ecosystem around these devices
