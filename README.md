@@ -93,11 +93,11 @@ What this does:
 ## Quick Start
 
 ```bash
-./venv/bin/python ./run_lenovo_decrypt.py \
-  --package-dir ~/Desktop/TB351FU_ROW_OPEN_USER_M15125.2_A16_ZUI_17.5.10.073_ST_260213/TB351FU_ROW_OPEN_USER_M15125.2_A16_ZUI_17.5.10.073_ST_260213 \
-  --output-dir ~/Desktop/rom-decrypt
+./venv/bin/python ./run_lenovo_decrypt.py
 ```
-
+<p align="center">
+<img width="811" height="635" alt="image" src="https://github.com/user-attachments/assets/52462c3d-ff3b-4727-b9f7-83b99bef3ab5" />
+</p>
 If needed, you can pass the password explicitly:
 
 ```bash
@@ -106,6 +106,7 @@ If needed, you can pass the password explicitly:
   --output-dir ~/Desktop/rom-decrypt \
   --password OSD
 ```
+
 
 ## Expected ROM Layout
 
