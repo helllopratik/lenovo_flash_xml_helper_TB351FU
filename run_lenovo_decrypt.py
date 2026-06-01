@@ -12,9 +12,12 @@ import json
 import shutil
 import struct
 import sys
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
+import threading
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable
 
 SIGNATURE_MAGIC = b"\xcf\x06\x05\x04\x03\x02\x01\xfc"
 DEFAULT_PASSWORD = "OSD"
@@ -30,6 +33,8 @@ except ImportError as exc:  # pragma: no cover
         "  python3 -m pip install pycryptodome",
         file=sys.stderr,
     )
+    # If we are in GUI mode, we should show a message box, but we don't know yet.
+    # We'll just keep the exit for now as it's a hard dependency.
     raise SystemExit(2) from exc
 
 
@@ -364,17 +369,17 @@ def build_report(
     }
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Decrypt and validate Lenovo flash metadata files")
-    parser.add_argument("--package-dir", required=True, help="ROM folder that contains the image directory")
-    parser.add_argument("--output-dir", required=True, help="Directory where decrypted files will be written")
-    parser.add_argument("--password", default=DEFAULT_PASSWORD, help="Lenovo .x decryption password")
-    args = parser.parse_args()
-
-    package_dir = Path(args.package_dir).expanduser().resolve()
-    output_dir = Path(args.output_dir).expanduser().resolve()
+def run_decryption(
+    package_dir_str: str, 
+    output_dir_str: str, 
+    password: str, 
+    log_callback: Callable[[str], None]
+) -> bool:
+    package_dir = Path(package_dir_str).expanduser().resolve()
+    output_dir = Path(output_dir_str).expanduser().resolve()
 
     try:
+        log_callback(f"Starting decryption for {package_dir}")
         image_dir = find_package_image_dir(package_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -386,7 +391,8 @@ def main() -> int:
         generated_files: Dict[str, str] = {}
 
         flash_xml = output_dir / "flash.xml"
-        decrypted_sizes["flash.xml"] = decrypt_lenovo_x_file(flash_x, flash_xml, args.password)
+        log_callback("Decrypting flash.xml...")
+        decrypted_sizes["flash.xml"] = decrypt_lenovo_x_file(flash_x, flash_xml, password)
         generated_files["flash.xml"] = str(flash_xml)
 
         flash_info = validate_flash_xml(flash_xml, image_dir)
@@ -397,7 +403,8 @@ def main() -> int:
 
         scatter_xml_name = scatter_x.name.replace(".x", ".xml")
         scatter_xml = output_dir / scatter_xml_name
-        decrypted_sizes[scatter_xml_name] = decrypt_lenovo_x_file(scatter_x, scatter_xml, args.password)
+        log_callback(f"Decrypting {scatter_xml_name}...")
+        decrypted_sizes[scatter_xml_name] = decrypt_lenovo_x_file(scatter_x, scatter_xml, password)
         generated_files[scatter_xml_name] = str(scatter_xml)
 
         scatter_info = validate_scatter(scatter_xml, image_dir)
@@ -406,12 +413,18 @@ def main() -> int:
         for extra_source in extra_candidates:
             if extra_source.exists():
                 extra_dest = output_dir / extra_source.name.replace(".x", ".xml")
-                decrypted_sizes[extra_dest.name] = decrypt_lenovo_x_file(extra_source, extra_dest, args.password)
+                log_callback(f"Decrypting extra file: {extra_source.name}...")
+                decrypted_sizes[extra_dest.name] = decrypt_lenovo_x_file(extra_source, extra_dest, password)
                 generated_files[extra_dest.name] = str(extra_dest)
                 parse_xml(extra_dest)
 
+        log_callback("Copying support files...")
         copied_files = copy_support_files(image_dir, output_dir, flash_info)
+        
+        log_callback("Writing partition exports...")
         partition_exports = write_partition_exports(output_dir, scatter_info["partition_rows"])
+        
+        log_callback("Creating staging bundle...")
         stage_info = create_staging_folder(
             image_dir=image_dir,
             output_dir=output_dir,
@@ -437,14 +450,148 @@ def main() -> int:
         report_path = output_dir / "validation_report.json"
         report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
-        print("Decryption and validation completed successfully.")
-        print(f"Output directory: {output_dir}")
-        print(f"Validation report: {report_path}")
-        print(json.dumps(report["scatter_summary"], indent=2))
-        return 0
+        log_callback("Decryption and validation completed successfully.")
+        log_callback(f"Output directory: {output_dir}")
+        log_callback(f"Validation report: {report_path}")
+        log_callback("\nScatter Summary:")
+        log_callback(json.dumps(report["scatter_summary"], indent=2))
+        return True
     except ValidationError as exc:
-        print(f"Validation failed: {exc}", file=sys.stderr)
-        return 1
+        log_callback(f"Validation failed: {exc}")
+        return False
+    except Exception as exc:
+        log_callback(f"An unexpected error occurred: {exc}")
+        return False
+
+
+class LenovoDecryptGUI:
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.root.title("Lenovo Flash XML Decryptor")
+        self.root.geometry("800x600")
+        self.root.minsize(700, 500)
+        
+        # Configure grid expansion
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+
+        style = ttk.Style()
+        style.configure("Header.TLabel", font=("Helvetica", 12, "bold"))
+        style.configure("Action.TButton", font=("Helvetica", 10, "bold"), padding=10)
+
+        main_frame = ttk.Frame(root, padding="20")
+        main_frame.grid(row=0, column=0, sticky="nsew")
+        main_frame.columnconfigure(1, weight=1)
+
+        # Header
+        header = ttk.Label(main_frame, text="Lenovo Flash XML Decryptor", style="Header.TLabel")
+        header.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+
+        # Package Dir
+        ttk.Label(main_frame, text="Package Directory:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.package_dir_var = tk.StringVar()
+        self.package_entry = ttk.Entry(main_frame, textvariable=self.package_dir_var)
+        self.package_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+        ttk.Button(main_frame, text="Browse...", command=self.browse_package_dir).grid(row=1, column=2, pady=5)
+
+        # Output Dir
+        ttk.Label(main_frame, text="Output Directory:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.output_dir_var = tk.StringVar()
+        self.output_entry = ttk.Entry(main_frame, textvariable=self.output_dir_var)
+        self.output_entry.grid(row=2, column=1, sticky="ew", padx=5, pady=5)
+        ttk.Button(main_frame, text="Browse...", command=self.browse_output_dir).grid(row=2, column=2, pady=5)
+
+        # Password
+        ttk.Label(main_frame, text="Password:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.password_var = tk.StringVar(value=DEFAULT_PASSWORD)
+        self.password_entry = ttk.Entry(main_frame, textvariable=self.password_var)
+        self.password_entry.grid(row=3, column=1, sticky="ew", padx=5, pady=5)
+
+        # Decrypt Button
+        self.decrypt_btn = ttk.Button(main_frame, text="START DECRYPTION", style="Action.TButton", command=self.start_decryption)
+        self.decrypt_btn.grid(row=4, column=0, columnspan=3, pady=20)
+
+        # Progress/Log Area
+        log_frame = ttk.LabelFrame(main_frame, text="Output Log", padding="10")
+        log_frame.grid(row=5, column=0, columnspan=3, sticky="nsew", pady=10)
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.rowconfigure(0, weight=1)
+        main_frame.rowconfigure(5, weight=1)
+
+        self.log_text = tk.Text(log_frame, height=15, state="disabled", wrap="word", font=("Consolas", 10))
+        self.log_text.grid(row=0, column=0, sticky="nsew")
+
+        scrollbar = ttk.Scrollbar(log_frame, orient=tk.VERTICAL, command=self.log_text.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.log_text['yscrollcommand'] = scrollbar.set
+
+    def browse_package_dir(self):
+        directory = filedialog.askdirectory()
+        if directory:
+            self.package_dir_var.set(directory)
+            # Default output dir to package_dir/decrypted if not set
+            if not self.output_dir_var.get():
+                self.output_dir_var.set(str(Path(directory) / "decrypted"))
+
+    def browse_output_dir(self):
+        directory = filedialog.askdirectory()
+        if directory:
+            self.output_dir_var.set(directory)
+
+    def log(self, message: str):
+        self.log_text.config(state="normal")
+        self.log_text.insert(tk.END, message + "\n")
+        self.log_text.see(tk.END)
+        self.log_text.config(state="disabled")
+
+    def start_decryption(self):
+        pkg = self.package_dir_var.get()
+        out = self.output_dir_var.get()
+        pwd = self.password_var.get()
+
+        if not pkg or not out:
+            messagebox.showerror("Error", "Please select both package and output directories.")
+            return
+
+        self.decrypt_btn.config(state="disabled")
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+        
+        def task():
+            success = run_decryption(pkg, out, pwd, self.log)
+            self.root.after(0, lambda: self.finish_decryption(success))
+
+        threading.Thread(target=task, daemon=True).start()
+
+    def finish_decryption(self, success: bool):
+        self.decrypt_btn.config(state="normal")
+        if success:
+            messagebox.showinfo("Success", "Decryption completed successfully!")
+        else:
+            messagebox.showerror("Failed", "Decryption failed. Check the log for details.")
+
+
+def main() -> int:
+    # Use argparse to see if we should run in CLI mode
+    parser = argparse.ArgumentParser(description="Decrypt and validate Lenovo flash metadata files")
+    parser.add_argument("--package-dir", help="ROM folder that contains the image directory")
+    parser.add_argument("--output-dir", help="Directory where decrypted files will be written")
+    parser.add_argument("--password", default=DEFAULT_PASSWORD, help="Lenovo .x decryption password")
+    parser.add_argument("--gui", action="store_true", help="Force GUI mode")
+    args = parser.parse_args()
+
+    # If package-dir and output-dir are provided, run in CLI mode
+    if args.package_dir and args.output_dir and not args.gui:
+        success = run_decryption(args.package_dir, args.output_dir, args.password, print)
+        return 0 if success else 1
+    else:
+        # Run in GUI mode
+        root = tk.Tk()
+        # Try to set icon if it exists (optional)
+        app = LenovoDecryptGUI(root)
+        root.mainloop()
+        return 0
 
 
 if __name__ == "__main__":
