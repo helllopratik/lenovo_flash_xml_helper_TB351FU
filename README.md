@@ -63,6 +63,10 @@ Observed values from the decrypted metadata:
 | `assets/readme-banner.svg` | README banner artwork |
 | `LICENSE` | MIT license |
 
+## Windows User
+
+- For windows user only : https://github.com/QianMo-IT/Lenovo-TB351FU-Bootloader-Unlock
+
 ## Requirements
 
 - Linux environment with `python3`
