@@ -65,7 +65,7 @@ Observed values from the decrypted metadata:
 
 ## Windows User
 
-- For windows user only : https://github.com/QianMo-IT/Lenovo-TB351FU-Bootloader-Unlock
+- For windows user only (outdated): https://github.com/QianMo-IT/Lenovo-TB351FU-Bootloader-Unlock
 
 ## Requirements
 
